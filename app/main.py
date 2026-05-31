@@ -1,17 +1,26 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.routes import assets, portfolio, news, summaries
-from app.schedulers.jobs import start_scheduler, stop_scheduler
+
+# APScheduler ทำงานได้เฉพาะ long-running server (Render/local)
+# บน Vercel (serverless) ใช้ Vercel Cron แทน
+USE_SCHEDULER = os.getenv("USE_SCHEDULER", "false").lower() == "true"
+
+if USE_SCHEDULER:
+    from app.schedulers.jobs import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_scheduler()
+    if USE_SCHEDULER:
+        start_scheduler()
     yield
-    stop_scheduler()
+    if USE_SCHEDULER:
+        stop_scheduler()
 
 
 app = FastAPI(
